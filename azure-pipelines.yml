@@ -10,28 +10,17 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- task: DotNetCoreCLI@2
-  displayName: 'Run Unit Tests'
-  inputs:
-    command: 'test'
-    projects: '**/*Tests/*.csproj'  # Please adjust according to your test project path
-    arguments: '--configuration Release'
-
-- task: PublishTestResults@2
-  displayName: 'Publish Test Results'
-  condition: succeededOrFailed()  # Execute even if tests fail
-  inputs:
-    testResultsFormat: 'VSTest'
-    testResultsFiles: '**/*.trx'
-    
+# 1. Install NuGet first
 - task: NuGetToolInstaller@1
   displayName: 'Install NuGet'
 
+# 2. Restore dependencies
 - task: NuGetCommand@2
   displayName: 'Restore NuGet Packages'
   inputs:
     restoreSolution: '$(solution)'
 
+# 3. Build the solution (This compiles both main and test projects)
 - task: VSBuild@1
   displayName: 'Build Visual Studio Solution'
   inputs:
@@ -39,8 +28,25 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
+# 4. Run the Tests
+# Note: We use VSTest because it works seamlessly with the built solution
 - task: VSTest@2
-  displayName: 'Run Tests'
+  displayName: 'Run Unit Tests'
   inputs:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
+    # This tells the pipeline to look for test DLLs in the build output folder
+    searchFolder: '$(System.DefaultWorkingDirectory)' 
+    testAssemblyVer2: |
+     **\*test*.dll
+     !**\*TestAdapter.dll
+     !**\obj\**
+
+# 5. Publish Results (Run this even if tests fail so you can see why)
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results'
+  condition: succeededOrFailed() 
+  inputs:
+    testResultsFormat: 'VSTest'
+    testResultsFiles: '**/*.trx'
+    searchFolder: '$(Agent.TempDirectory)' # VSTest saves .trx files in the temp directory by default

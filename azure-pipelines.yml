@@ -10,7 +10,12 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-
+- task: DotNetCoreCLI@2
+  displayName: 'Run Unit Tests'
+  inputs:
+    command: 'test'
+    projects: '**/*Tests/*.csproj'  # Please adjust according to your test project path
+    arguments: '--configuration Release'
 - task: NuGetToolInstaller@1
   displayName: 'Install NuGet'
 
